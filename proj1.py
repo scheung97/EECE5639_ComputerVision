@@ -1,7 +1,28 @@
 #GOAL: detect moving object by looking at large gradients in the temporal evolution of pixael values
+import cv2 
+import numpy as np 
+import os 
 
-def main(){
+def main():    
     #read img frames + convert to grayscale
+    officePath = '../Office'
+    redChairPath = r'../RedChair'
+
+    onlyfiles = [f for f in os.listdir(officePath) if os.path.isfile(os.path.join(officePath,f))]
+    images = np.empty(len(onlyfiles), dtype=object)
+    images_gray = np.empty(len(images), dtype=object)
+    
+    for i in range(0, len(onlyfiles)): 
+        images[i] = cv2.imread(os.path.join(officePath,onlyfiles[i]))
+        images_gray[i] = cv2.cvtColor(images[i],cv2.COLOR_BGRA2GRAY)
+        filename = "../OfficeGray/grayimg%i.jpg"%i
+        cv2.imwrite(filename, images_gray[i])
+        # if(i <= 5): 
+        #     cv2.imshow('gray', images_gray[i])
+        #     cv2.waitKey(0)
+        #     cv2.destroyAllWindows()
+
+
     #with enough frames available, apply 1-D diff operator to compute temporal derivative
     #threshold absolute values of derivatives to create 0 and 1 mask of moving objects
     #combine mask with original frame to display results
@@ -14,7 +35,7 @@ def main(){
         - Vary threshold + design strat to select good threshold for each image 
             - hint: bkgrnd pixels have temporal gradients close to zero --> model these vals as Gaussian 0-mean noise              + estimate std of this noise
     """
-}
+
 
        
 
