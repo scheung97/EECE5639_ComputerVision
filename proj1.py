@@ -6,33 +6,36 @@ import matplotlib.pyplot as plt
 import os
 
 def process_frame(frame): 
-    # grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
+    ##grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
     oneDimOperator = np.matrix([-1, 0, 1])
 
     filtImage = signal.convolve2d(frame, oneDimOperator)
 
     return filtImage
 def main():    
-    #file paths to images
+    ##file paths to images
     officePath = r'../Office/'
     officeGrayPath = r'../OfficeGray/'
     redChairPath = r'../RedChair'
     redChairGrayPath = r'../RedChairGray/'
 
-    #variables used (update when changing image folders): 
-    imagePath = redChairPath #officePath
-    pathUsed = redChairGrayPath #officeGrayPath 
+    ## variables used (update when changing image folders): 
+    # imagePath = redChairPath 
+    imagePath = officePath
+    # pathUsed = redChairGrayPath 
+    pathUsed = officeGrayPath 
 
-    #check if file
+    #check if file directiory exists: 
     if(os.path.exists(pathUsed) == False):
         print('--------------------------------------------------------')
-        print('\tMaking gray image directory....')
+        print('Making gray image directory....')
         print('--------------------------------------------------------')
         os.mkdir(pathUsed)
     
+    #check if grayscale images exist: 
     if(len(os.listdir(pathUsed)) == 0): 
         print('--------------------------------------------------------')
-        print('\tCreating grayscale images....')
+        print('Creating grayscale images....')
         print('--------------------------------------------------------')
         files = [f for f in os.listdir(imagePath) if os.path.isfile(os.path.join(imagePath,f))]
         imgs = np.empty(len(files), dtype=object)
@@ -44,10 +47,19 @@ def main():
             filename = "{}grayimg{}.jpg".format(pathUsed,i)
             cv2.imwrite(filename, grayImgs[i])
 
+    #read in grayscale files directly if checks pass: 
+    files = [f for f in os.listdir(pathUsed) if os.path.isfile(os.path.join(pathUsed,f))]
+    imgs = np.empty(len(files), dtype=object)
+    for i in range(0, len(imgs)): 
+        imgs[i] = cv2.imread(os.path.join(pathUsed,files[i]), 0) #need 0 flag to read as grayscale
+       
 
 
-        # filtImg=process_frame(grayImgs[i]) #convoolve over 1 frame
-        # cv2.imshow('deep', filtImg)
+
+        
+
+    # filtImg=process_frame(imgs) #convoolve over 1 frame
+    # cv2.imshow('deep', filtImg)
     
 
 
