@@ -1,31 +1,32 @@
 #GOAL: detect moving object by looking at large gradients in the temporal evolution of pixael values
 import cv2 
 import numpy as np 
-import os 
+from scipy import signal
 
-def make_video(): 
-    print('video created')
+def process_frame(frame): 
+    grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
+    oneDimOperator = np.array([-1,0, 1])
+    filtImage = signal.convolve2d(grayFrame, oneDimOperator)
+    return filtImage
+
 def main():    
     #read img frames + convert to grayscale
-    officePath = '../Office'
-    redChairPath = r'../RedChair'
-
-    onlyfiles = [f for f in os.listdir(officePath) if os.path.isfile(os.path.join(officePath,f))]
-    images = np.empty(len(onlyfiles), dtype=object)
-    gray_images = np.empty(len(images), dtype=object)
-
-    for i in range(0, len(onlyfiles)): 
-        images[i] = cv2.imread(os.path.join(officePath,onlyfiles[i]))
-        gray_images[i] = cv2.cvtColor(images[i],cv2.COLOR_BGRA2GRAY)
-
-        """ test for if image conversion worked:"""
-        #filename = "../OfficeGray/grayimg%i.jpg"%i 
-        #cv2.imwrite(filename, gray_images[i])
-        # if(i <= 5): 
-        #     cv2.imshow('gray', gray_images[i])
-        #     cv2.waitKey(0)
-        #     cv2.destroyAllWindows()
-
+    video_path = './Videos/Office.mp4'
+    # video_path = '../Videos/RedChair.mp4'
+    cap = cv2.VideoCapture(video_path)
+    if(cap.isOpened()==False):
+        print("Error opening video")
+    while(cap.isOpened()):
+        ret,frame=cap.read()
+        if ret == True: 
+            frame = process_frame(frame)
+            cv2.imshow('Project 1', frame)
+            if cv2.waitKey(25) & 0xFF == ord('q'): 
+                break
+        else: 
+            break
+    cap.release()
+    cv2.destroyAllWindows()
 
     #with enough frames available, apply 1-D diff operator to compute temporal derivative
     #threshold absolute values of derivatives to create 0 and 1 mask of moving objects
