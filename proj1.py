@@ -2,31 +2,54 @@
 import cv2 
 import numpy as np 
 from scipy import signal
+import matplotlib.pyplot as plt
+import os
 
 def process_frame(frame): 
-    grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
-    oneDimOperator = np.array([-1,0, 1])
-    filtImage = signal.convolve2d(grayFrame, oneDimOperator)
-    return filtImage
+    # grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
+    oneDimOperator = np.matrix([-1, 0, 1])
 
+    filtImage = signal.convolve2d(frame, oneDimOperator)
+
+    return filtImage
 def main():    
-    #read img frames + convert to grayscale
-    video_path = './Videos/Office.mp4'
-    # video_path = '../Videos/RedChair.mp4'
-    cap = cv2.VideoCapture(video_path)
-    if(cap.isOpened()==False):
-        print("Error opening video")
-    while(cap.isOpened()):
-        ret,frame=cap.read()
-        if ret == True: 
-            frame = process_frame(frame)
-            cv2.imshow('Project 1', frame)
-            if cv2.waitKey(25) & 0xFF == ord('q'): 
-                break
-        else: 
-            break
-    cap.release()
-    cv2.destroyAllWindows()
+    #file paths to images
+    officePath = r'../Office/'
+    officeGrayPath = r'../OfficeGray/'
+    redChairPath = r'../RedChair'
+    redChairGrayPath = r'../RedChairGray/'
+
+    #variables used (update when changing image folders): 
+    imagePath = redChairPath #officePath
+    pathUsed = redChairGrayPath #officeGrayPath 
+
+    #check if file
+    if(os.path.exists(pathUsed) == False):
+        print('--------------------------------------------------------')
+        print('\tMaking gray image directory....')
+        print('--------------------------------------------------------')
+        os.mkdir(pathUsed)
+    
+    if(len(os.listdir(pathUsed)) == 0): 
+        print('--------------------------------------------------------')
+        print('\tCreating grayscale images....')
+        print('--------------------------------------------------------')
+        files = [f for f in os.listdir(imagePath) if os.path.isfile(os.path.join(imagePath,f))]
+        imgs = np.empty(len(files), dtype=object)
+        grayImgs = np.empty(len(imgs), dtype=object)
+        
+        for i in range(0, len(imgs)): 
+            imgs[i] = cv2.imread(os.path.join(imagePath,files[i]))
+            grayImgs[i] = cv2.cvtColor(imgs[i],cv2.COLOR_BGRA2GRAY)
+            filename = "{}grayimg{}.jpg".format(pathUsed,i)
+            cv2.imwrite(filename, grayImgs[i])
+
+
+
+        # filtImg=process_frame(grayImgs[i]) #convoolve over 1 frame
+        # cv2.imshow('deep', filtImg)
+    
+
 
     #with enough frames available, apply 1-D diff operator to compute temporal derivative
     #threshold absolute values of derivatives to create 0 and 1 mask of moving objects
