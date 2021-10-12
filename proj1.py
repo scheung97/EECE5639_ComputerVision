@@ -13,19 +13,23 @@ def thresholding(frame, threshold):
     return dst
 
 
-
 def main():    
     ##file paths to images
     officePath = r'../Office/'
     officeGrayPath = r'../OfficeGray/'
+
     redChairPath = r'../RedChair'
     redChairGrayPath = r'../RedChairGray/'
 
+
     ## variables used (update when changing image folders): 
-    # imagePath = redChairPath 
-    imagePath = officePath
-    # pathUsed = redChairGrayPath 
-    pathUsed = officeGrayPath 
+    imagePath = redChairPath 
+    pathUsed = redChairGrayPath 
+    video = 'redchair' #used for naming output file
+
+    # imagePath = officePath
+    # pathUsed = officeGrayPath 
+    #  video = 'office' #used for naming output file
 
 
     #check if file directiory exists: 
@@ -44,35 +48,35 @@ def main():
         imgs = np.empty(len(files), dtype=object)
         grayImgs = np.empty(len(imgs), dtype=object)
         
-        for i in range(0, len(imgs)): 
+        for i in range(0, len(files)): 
             imgs[i] = cv2.imread(os.path.join(imagePath,files[i]))
             grayImgs[i] = cv2.cvtColor(imgs[i],cv2.COLOR_BGRA2GRAY)
-            filename = "{}grayimg{}.jpg".format(pathUsed,i)
+            filename = "{}grayimg_{:004d}.jpg".format(pathUsed,i)
             cv2.imwrite(filename, grayImgs[i])
 
     #read in grayscale files directly if checks pass: 
-    files = [f for f in os.listdir(pathUsed) if os.path.isfile(os.path.join(pathUsed,f))]
+    files = [f for f in os.listdir(pathUsed)if os.path.isfile(os.path.join(pathUsed,f))]
     imgs = np.empty(len(files), dtype=object)
-    # color_files = [f for f in os.listdir(imagePath) if os.path.isfile(os.path.join(imagePath,f))]
-    # color_imgs = np.empty(len(color_files), dtype=object)
 
-    for i in range(0, len(imgs)): 
+    color_files = [f for f in os.listdir(imagePath) if os.path.isfile(os.path.join(imagePath,f))]
+    color_imgs = np.empty(len(color_files), dtype=object)
+    for i in range(0, len(files)): 
         imgs[i] = cv2.imread(os.path.join(pathUsed,files[i]), 0) #need 0 flag to read as grayscale
-        # color_imgs = cv2.imread(os.path.join(imagePath,color_files[i]))
+        color_imgs = cv2.imread(os.path.join(imagePath,color_files[i]))
     """
     note:  
     format of imgs:    imgs[frame#][x-cord,y-cord]
     0-indexed 
     """
-    threshold = 20
+
+    threshold = 10
     #make arrays 1-indexed b/c we don't use the 1st frame
-    mvImgs=[]
     masks=[]
     count=0
     diffImg = np.empty(len(imgs),dtype=object)
     for j in range(1,len(imgs)):
         #check that first and last imgs aren't being used
-        imgs[i]= cv2.GaussianBlur(imgs[i], (3,3), 0)
+        imgs[j]= cv2.GaussianBlur(imgs[j], (3,3), 0)
         try: 
             # difference between -1 and 1 img; curr image = 0: 
             delta = cv2.absdiff(imgs[j],imgs[j-1])
@@ -84,28 +88,31 @@ def main():
                 count = count + 1
             mask = thresholding(delta, threshold)
             masks.append(mask)
-            del delta, test
+            del delta
+            del test
         except IndexError as e: 
             print(e)
 
-
+    mvImgs=[]
     for i in range(1,len(imgs)): 
         mvImg = np.multiply(imgs[i], masks[i-1])
+        mvImg=cv2.cvtColor(mvImg, cv2.COLOR_GRAY2BGR)
         mvImgs.append(mvImg)
-    
+
    #testing if mask works:
-    for i in range(0,len(mvImgs)): 
-        cv2.imshow('test', mvImgs[i])
-        cv2.waitKey(0)
-
+    # for i in range(0,len(mvImgs)): 
+    #     cv2.imshow('test', mvImgs[i])
+    #     cv2.waitKey(0)
     
-    # for i in range(1, len(diffImg)): 
-    #     plt.imshow(diffImg[i],cmap='gray')
-    #     plt.show()  
+    output_path =  './Output/{}_output/'.format(video)
+    if(os.path.exists(output_path) == False): 
+        if(os.path.exists('./Output/')== False): 
+            os.mkdir('./Output/')
+        os.mkdir('./Output/{}_output/'.format(video))
 
-    #with enough frames available, apply 1-D diff operator to compute temporal derivative
-    #threshold absolute values of derivatives to create 0 and 1 mask of moving objects
-    #combine mask with original frame to display results
+    for i in range(len(mvImgs)): 
+        filename="{}{}_motiondetection_{:004d}.jpg".format(output_path,video,i)
+        cv2.imwrite(filename, mvImgs[i])
 
     """
     Variations: 

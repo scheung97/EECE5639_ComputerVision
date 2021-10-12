@@ -4,8 +4,12 @@ import os
 from os.path import isfile, join
 # pathIn= '../Office/'
 # pathOut = './Videos/Office.mp4'
-pathIn= '../RedChair/'
-pathOut = './Videos/RedChair.mp4'
+# pathIn= '../RedChair/'
+# pathOut = './Videos/RedChair.mp4'
+# pathIn= './Output/office_output/'
+# pathOut = './Videos/OfficeMotion.mp4'
+pathIn= './Output/redchair_output/'
+pathOut = './Videos/RedChairMotion.mp4'
 fps = 12 #24fps for office video & 12fps for redchair seem okay
 frame_array = []
 files = [f for f in os.listdir(pathIn) if isfile(join(pathIn, f))]
