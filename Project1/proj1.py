@@ -1,9 +1,6 @@
 #GOAL: detect moving object by looking at large gradients in the temporal evolution of pixael values
 import cv2 
 import numpy as np
-from numpy.core.function_base import linspace
-from numpy.lib.twodim_base import mask_indices 
-from scipy import signal
 import matplotlib.pyplot as plt
 import os
 
@@ -59,10 +56,9 @@ def main():
     imgs = np.empty(len(files), dtype=object)
 
     color_files = [f for f in os.listdir(imagePath) if os.path.isfile(os.path.join(imagePath,f))]
-    color_imgs = np.empty(len(color_files), dtype=object)
     for i in range(0, len(files)): 
         imgs[i] = cv2.imread(os.path.join(pathUsed,files[i]), 0) #need 0 flag to read as grayscale
-        color_imgs = cv2.imread(os.path.join(imagePath,color_files[i]))
+
     """
     note:  
     format of imgs:    imgs[frame#][x-cord,y-cord]
