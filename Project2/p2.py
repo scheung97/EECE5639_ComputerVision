@@ -6,17 +6,19 @@ import math
 
 
 def main(): 
-    print("Hello World") 
-    img = cv2.imread("test.jpg")
-    grey_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #read in 2 imgs (if img size is too large --> reduce, and document scale factor used)
+    
+    #apply harris corner detector to both: compute Harris R function over image + do non-max suppression to get a sparse set of corner features
 
-    angle = math.radians(90)
-    rotate_z = np.array([[math.cos(angle), -1*math.sin(angle)],[math.sin(angle),math.cos(angle)]])
+    #Find correspondences btwn 2 imgs: Choose potential corner matches by finding pair of corners such that they have the highest NCC values (threshold for large NCC scores?)
 
-    print(grey_img.shape)
-    for x in range(len(grey_img[0])):
-        for y in range(len(grey_img[1])):
-                test = grey_img[x][y]*rotate_z
+    #Correspondences --> estimate homography (Use RANSAC to help reduce outliers/errors)
+        #breakdown of steps found in PDF
+
+    #Warp image onto the other + blend overlapping pixels
+        #breakdown of steps found in PDF
+    
+    
 
 
 if __name__ == "__main__":
