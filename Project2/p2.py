@@ -2,10 +2,18 @@ import cv2
 import numpy as np
 import math
 import os 
-
+import scipy
+from scipy import signal as sig
 
 hallway_path = "./DanaHallWay1"
 office_path = "./DanaOffice"
+
+def edge_detection(img): 
+    sobel_X= np.array([[-1,0, 1],[-2,0,2],[-1,0,-1]])
+    sobel_Y= np.array([[1, 2, 1],[0,0,0],[-1,-2,-1]])
+    Ex = sig.convolve2d(img, sobel_X)
+    Ey = sig.convolve2d(img, sobel_Y)
+    return Ex, Ey
 
 def main(): 
 
@@ -35,12 +43,10 @@ def main():
     # print(hallway_files.shape)
 
  #2) apply harris corner detector to both: compute Harris R function over image + do non-max suppression to get a sparse set of corner features
-    img = hallway_files[1]
-    dst=cv2.cornerHarris(img,2,3,0,0.4)
-    dst = cv2.dilate(dst,None)
-    img[dst>0.01*dst.max()]=[0]
-    cv2.imshow('hello',img)
-    cv2.waitKey(0)
+    Ex, Ey = edge_detection(hallway_files[0])
+    print(Ex) 
+    print('============================')
+    print(Ey)
  #3) Find correspondences btwn 2 imgs: Choose potential corner matches by finding pair of corners such that they have the highest NCC values (threshold for large NCC scores?)
 
  #4) Correspondences --> estimate homography (Use RANSAC to help reduce outliers/errors)
