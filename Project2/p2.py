@@ -1,6 +1,6 @@
 import cv2 
 import numpy as np
-import math
+import matplotlib.pyplot as plt
 import os 
 import scipy
 from scipy import signal as sig
@@ -8,12 +8,51 @@ from scipy import signal as sig
 hallway_path = "./DanaHallWay1"
 office_path = "./DanaOffice"
 
-def edge_detection(img): 
-    sobel_X= np.array([[-1,0, 1],[-2,0,2],[-1,0,-1]])
+def image_gradients(img): 
+    sobel_X= np.array([[1,0, -1],[2,0,-2],[1,0,-1]])
     sobel_Y= np.array([[1, 2, 1],[0,0,0],[-1,-2,-1]])
     Ex = sig.convolve2d(img, sobel_X)
     Ey = sig.convolve2d(img, sobel_Y)
     return Ex, Ey
+
+def harrisCorner(img):
+    #Image gradients using sobel filter:
+    """
+    https://stackoverflow.com/questions/22974432/using-the-output-of-harris-corner-detector-to-detect-corners-a-new-issue-arises
+    using Yung Yung's comment
+    """
+    window_size = 9
+    std = 1
+    k = 0.05
+    
+    Ex, Ey = image_gradients(img)
+    w_mask = sig.windows.gaussian(window_size**2,std, sym=True) #returns gaussian window for smoothing \
+    w_mask = w_mask.reshape((window_size,window_size))
+   
+    #Compute products of derivatives :
+    E2X = Ex**2
+    E2Y = Ey**2
+    Exy = Ex*Ey
+
+
+    #Sums of products, using 9x9 gaussian matrix w/ std=1
+    TL = sig.convolve2d(E2X, w_mask,'same') #top-left of C matrix
+    BR = sig.convolve2d(E2Y, w_mask,'same') #bottom-right of C matrix
+    Diags = sig.convolve2d(Exy, w_mask,'same') #diagonals of C matrix
+
+    #Calculate corner Response: 
+    det = (TL*BR) - (Diags**2)
+    trace = (TL + BR)
+    
+    #R_test is noisier, but has more points
+    R = det - k*(trace**2)
+ 
+    # cv2.imshow('R', R)
+    # cv2.waitKey(0)    
+    
+    #NMS
+
+    return R #replace later with rows+cols of points
 
 def main(): 
 
@@ -42,11 +81,10 @@ def main():
     hallway_files = np.array(hallway_imgs)
     # print(hallway_files.shape)
 
- #2) apply harris corner detector to both: compute Harris R function over image + do non-max suppression to get a sparse set of corner features
-    Ex, Ey = edge_detection(hallway_files[0])
-    print(Ex) 
-    print('============================')
-    print(Ey)
+ #2) apply harris corner to both: compute Harris R function over image + do non-max suppression to get a sparse set of corner features
+    R = harrisCorner(hallway_files[0])
+    print(R)
+
  #3) Find correspondences btwn 2 imgs: Choose potential corner matches by finding pair of corners such that they have the highest NCC values (threshold for large NCC scores?)
 
  #4) Correspondences --> estimate homography (Use RANSAC to help reduce outliers/errors)
@@ -65,5 +103,5 @@ if __name__ == "__main__":
 
 """
 extra credit info: 
-https://learnopencv.com/homography-examples-using-opencv-python-c/
+https://learnopencv.com/homography-examples-using-opencv-python-c/  
 """
