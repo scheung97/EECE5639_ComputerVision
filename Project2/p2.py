@@ -8,6 +8,10 @@ from scipy import signal as sig
 hallway_path = "./DanaHallWay1"
 office_path = "./DanaOffice"
 
+
+# !pip install opencv-python==3.4.2.17
+# !pip install opencv-contrib-python==3.4.2.17
+
 def image_gradients(img): 
     sobel_X= np.array([[1,0, -1],[2,0,-2],[1,0,-1]])
     sobel_Y= np.array([[1, 2, 1],[0,0,0],[-1,-2,-1]])
@@ -15,18 +19,26 @@ def image_gradients(img):
     Ey = sig.convolve2d(img, sobel_Y)
     return Ex, Ey
 
+def find_corner_coords(local_max): 
+    #get corner locations
+    corners = np.where(local_max>0)
+    corners = np.array(corners).T
+    return corners
+
 def harrisCorner(img):
-    #Image gradients using sobel filter:
     """
     https://stackoverflow.com/questions/22974432/using-the-output-of-harris-corner-detector-to-detect-corners-a-new-issue-arises
     using Yung Yung's comment
     """
-    window_size = 9
+    window_size = 9 #for gaussian window
     std = 1
     k = 0.05
     
+    #Image gradients using sobel filter:
     Ex, Ey = image_gradients(img)
-    w_mask = sig.windows.gaussian(window_size**2,std, sym=True) #returns gaussian window for smoothing \
+
+    #gaussian window for smoothing
+    w_mask = sig.windows.gaussian(window_size**2,std, sym=True) 
     w_mask = w_mask.reshape((window_size,window_size))
    
     #Compute products of derivatives :
@@ -45,14 +57,125 @@ def harrisCorner(img):
     trace = (TL + BR)
     
     #R_test is noisier, but has more points
-    R = det - k*(trace**2)
- 
-    # cv2.imshow('R', R)
-    # cv2.waitKey(0)    
+    R = det - k*(trace**2)  
     
     #NMS
+    _, R = cv2.threshold(R, 0.01*R.max(), 255, 0)
 
-    return R #replace later with rows+cols of points
+    pad_img = np.pad(R, ((1,1), (1,1)))
+    local_max = np.zeros_like(pad_img) 
+
+    for i in range(1, pad_img.shape[0]-1): 
+        for j in range(1, pad_img.shape[0]-1): 
+            wind = pad_img[i-1:i+1]
+            if pad_img[i,j] == np.amax(wind): 
+                local_max[i,j] = pad_img[i,j]
+
+    #remove padding 
+    local_max = local_max[2:-2,2:-2] 
+    
+    return local_max, (local_max+img)
+
+def get_window(img,h,w,n): 
+    #gets nxn window of image centered at corner coords 
+    #used for NCC calculation 
+    pad_img = np.pad(img, ((n,n), (n,n)))
+    window = pad_img[h+n : h+2*n, w+n : w+2*n]
+    return window 
+
+def match_corners(img1, img2, corners1, corners2):
+    #matches corners between two images
+    matches = np.zeros((np.sum(corners1>0), 5))
+    corners1 = find_corner_coords(corners1)
+    corners2 = find_corner_coords(corners2)
+    for i in range(len(corners1)): 
+        h1, w1 = corners1[i]
+        match = np.array([h1,w1,0,0,0])
+        window1 = get_window(img1,h1,w1,5)
+        for j in range(len(corners2)):
+            h2, w2 = corners2[j]
+            window2 = get_window(img2,h2,w2,5)
+            
+            #NCC
+            ncc = cv2.matchTemplate(window1.astype(np.float32),
+                                    window2.astype(np.float32), 
+                                    cv2.TM_CCORR_NORMED)
+            if ncc >= match[4]: 
+                match = [h1, w1, h2, w2, ncc]
+        matches[i,:] = match 
+    return matches 
+
+def plot_correspondences(img1, img2, matches): 
+    #draw lines between matching corners 
+    h_offset= img1.shape[0]
+    w_offset= img2.shape[1]
+    x = np.copy(matches[:,0:4:2])
+    y = np.copy(matches[:, 1:4:2])
+    y[:,1] = y[:,1] + w_offset
+
+    matched_imgs = np.hstack([img1,img2])
+    plt.imshow(matched_imgs, cmap='gray')
+    for i in range(0,x.shape[0]): 
+        if matches[i,-1] >=0.99: 
+            plt.plot(y[i,:], x[i,:])
+    plt.show()
+    return 0
+
+def RANSAC(img1, img2): 
+    #initialize sift 
+    sift = cv2.xfeatures2d.SIFT_create()
+
+    #find keypoints
+    img1 = cv2.normalize(img1, None, 0,255, cv2.NORM_MINMAX).astype('uint8')
+    img2 = cv2.normalize(img2, None, 0,255, cv2.NORM_MINMAX).astype('uint8')
+
+    kp1, des1 = sift.detectAndCompute(img1, None)
+    kp2, des2 = sift.detectAndCompute(img2, None)
+
+    FLANN_INDEX_KDTREE = 0
+    index_params = dict(algo = FLANN_INDEX_KDTREE, trees = 5)
+    search_params = dict(checks = 50)
+
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+    matches2 = flann.knnMatch(des1, des2, k=2)
+
+    #store all good matches: 
+    good = []
+    for m,n in matches2: 
+        if m.dist < 0.7*n.distance: 
+            good.append(m) 
+
+    src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+    dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+
+    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+    matches_mask = mask.ravel().tolist()
+    h,w = img1.shape
+    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    dst = cv2.perspectiveTransform(pts,M)
+    img2 = cv2.polylines(img2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+
+    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+                   singlePointColor = None,
+                   matchesMask = matches_mask, # draw only inliers
+                   flags = 2)
+    img3 = cv2.drawMatches(img1,kp1,img2,kp2,good,None,matchesMask = matches_mask, flags = 2)#**draw_params)
+
+    # plt.imshow(img3, 'gray')
+    # plt.show()
+    return M
+
+def warp(img1, img2, H): 
+    end_h = img1.shape[0]
+    end_w = img1.shape[1] + img2.shape[1]
+    
+    warp_img = cv2.warpPerspective(img1, H, (end_w, end_h))
+    warp_img[0:img2.shape[0], 0:img2.shape[1]] = img2
+    return (end_w, end_h), warp_img 
+
+
+
 
 def main(): 
 
@@ -79,22 +202,25 @@ def main():
         hallway_imgs.append(gray_img)
 
     hallway_files = np.array(hallway_imgs)
-    # print(hallway_files.shape)
 
  #2) apply harris corner to both: compute Harris R function over image + do non-max suppression to get a sparse set of corner features
-    R = harrisCorner(hallway_files[0])
-    print(R)
+    #compute harris R function: 
+    corners1, mask1 = harrisCorner(hallway_files[0])
+    corners2, mask2 = harrisCorner(hallway_files[1])
 
  #3) Find correspondences btwn 2 imgs: Choose potential corner matches by finding pair of corners such that they have the highest NCC values (threshold for large NCC scores?)
+    correspondences = match_corners(mask1, mask2, corners1, corners2)
+    plot_correspondences(mask1, mask2, correspondences)
+
 
  #4) Correspondences --> estimate homography (Use RANSAC to help reduce outliers/errors)
         #breakdown of steps found in PDF
-
+    M = RANSAC(mask1, mask2)
+    
  #5) Warp image onto the other + blend overlapping pixels
         #breakdown of steps found in PDF
-    
-    
-
+    (final_x, final_y), warped_img = warp(mask1, mask2, M)
+    cv2.imshow(warped_img)
 
 if __name__ == "__main__":
     main()
