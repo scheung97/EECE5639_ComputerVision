@@ -13,10 +13,8 @@ office_path = "./DanaOffice"
 # !pip install opencv-contrib-python==3.4.2.17
 
 def image_gradients(img): 
-    sobel_X= np.array([[1,0, -1],[2,0,-2],[1,0,-1]])
-    sobel_Y= np.array([[1, 2, 1],[0,0,0],[-1,-2,-1]])
-    Ex = sig.convolve2d(img, sobel_X)
-    Ey = sig.convolve2d(img, sobel_Y)
+    Ex = cv2.Sobel(img, ddepth=cv2.CV_64F, dx=1, dy=0, ksize=3)
+    Ey = cv2.Sobel(img, ddepth=cv2.CV_64F, dx=0, dy=1, ksize=3)
     return Ex, Ey
 
 def find_corner_coords(local_max): 
@@ -30,7 +28,7 @@ def harrisCorner(img):
     https://stackoverflow.com/questions/22974432/using-the-output-of-harris-corner-detector-to-detect-corners-a-new-issue-arises
     using Yung Yung's comment
     """
-    window_size = 9 #for gaussian window
+    window_size = 3 #for gaussian window
     std = 1
     k = 0.05
     
@@ -48,16 +46,15 @@ def harrisCorner(img):
 
 
     #Sums of products, using 9x9 gaussian matrix w/ std=1
-    TL = sig.convolve2d(E2X, w_mask,'same') #top-left of C matrix
-    BR = sig.convolve2d(E2Y, w_mask,'same') #bottom-right of C matrix
-    Diags = sig.convolve2d(Exy, w_mask,'same') #diagonals of C matrix
+    S2X = sig.convolve2d(E2X, w_mask) #top-left of C matrix
+    S2Y = sig.convolve2d(E2Y, w_mask) #bottom-right of C matrix
+    Sxy = sig.convolve2d(Exy, w_mask) #diagonals of C matrix
 
     #Calculate corner Response: 
-    det = (TL*BR) - (Diags**2)
-    trace = (TL + BR)
+    det = (S2X*S2Y) - (Sxy*Sxy)
+    trace = (S2X + S2Y)
     
-    #R_test is noisier, but has more points
-    R = det - k*(trace**2)  
+    R = det - k*((trace)**2)  
     
     #NMS
     _, R = cv2.threshold(R, 0.01*R.max(), 255, 0)
@@ -66,15 +63,15 @@ def harrisCorner(img):
     local_max = np.zeros_like(pad_img) 
 
     for i in range(1, pad_img.shape[0]-1): 
-        for j in range(1, pad_img.shape[0]-1): 
-            wind = pad_img[i-1:i+1]
+        for j in range(1, pad_img.shape[1]-1): 
+            wind = pad_img[i-1:i+1, j-1:j+1]
             if pad_img[i,j] == np.amax(wind): 
                 local_max[i,j] = pad_img[i,j]
 
     #remove padding 
-    local_max = local_max[2:-2,2:-2] 
+    corners = local_max[2:-2,2:-2] 
     
-    return local_max, (local_max+img)
+    return corners, (corners+img)
 
 def get_window(img,h,w,n): 
     #gets nxn window of image centered at corner coords 
@@ -162,8 +159,8 @@ def RANSAC(img1, img2):
                    flags = 2)
     img3 = cv2.drawMatches(img1,kp1,img2,kp2,good,None,matchesMask = matches_mask, flags = 2)#**draw_params)
 
-    # plt.imshow(img3, 'gray')
-    # plt.show()
+    plt.imshow(img3, 'gray')
+    plt.show()
     return M
 
 def warp(img1, img2, H): 
