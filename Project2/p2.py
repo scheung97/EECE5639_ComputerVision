@@ -1,3 +1,5 @@
+#!/usr/bin/env python3.7
+
 import cv2 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -152,11 +154,7 @@ def RANSAC(img1, img2):
     pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
     dst = cv2.perspectiveTransform(pts,M)
     img2 = cv2.polylines(img2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-
-    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-                   singlePointColor = None,
-                   matchesMask = matches_mask, # draw only inliers
-                   flags = 2)
+    
     img3 = cv2.drawMatches(img1,kp1,img2,kp2,good,None,matchesMask = matches_mask, flags = 2)#**draw_params)
 
     plt.imshow(img3, 'gray')
@@ -171,9 +169,13 @@ def warp(img1, img2, H):
     warp_img[0:img2.shape[0], 0:img2.shape[1]] = img2
     return (end_w, end_h), warp_img 
 
-
-
-
+def blend(img): 
+    gauss_img = cv2.GaussianBlur(img, (3,3),0)
+    alpha = 0.5
+    beta = 1-alpha 
+    blended = cv2.addWeighted(img, alpha, gauss_img, beta, 0)
+    return blended 
+    
 def main(): 
 
  #1) read in 2 imgs (if img size is too large --> reduce, and document scale factor used)
@@ -217,8 +219,10 @@ def main():
  #5) Warp image onto the other + blend overlapping pixels
         #breakdown of steps found in PDF
     (final_x, final_y), warped_img = warp(mask1, mask2, M)
-    cv2.imshow(warped_img)
+    # cv2.imshow(warped_img)
 
+    blended_img = blend(warped_img)
+        
 if __name__ == "__main__":
     main()
 
