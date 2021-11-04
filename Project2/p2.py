@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/python3.7
 
 import cv2 
 import numpy as np
@@ -165,15 +165,15 @@ def warp(img1, img2, H):
     end_h = img1.shape[0]
     end_w = img1.shape[1] + img2.shape[1]
     
-    warp_img = cv2.warpPerspective(img1, H, (end_w, end_h))
-    warp_img[0:img2.shape[0], 0:img2.shape[1]] = img2
-    return (end_w, end_h), warp_img 
+    warp_img1 = cv2.warpPerspective(img1, H, (end_w, end_h)) #warps img1 to img2 plane 
 
-def blend(img): 
-    gauss_img = cv2.GaussianBlur(img, (3,3),0)
+    # warp_img[0:img2.shape[0], 0:img2.shape[1]] = img2
+    return (end_w, end_h), warp_img1
+
+def blend(img1, img2): 
     alpha = 0.5
     beta = 1-alpha 
-    blended = cv2.addWeighted(img, alpha, gauss_img, beta, 0)
+    blended = cv2.addWeighted(img1, alpha, img2, beta, 0)
     return blended 
     
 def main(): 
@@ -218,10 +218,10 @@ def main():
     
  #5) Warp image onto the other + blend overlapping pixels
         #breakdown of steps found in PDF
-    (final_x, final_y), warped_img = warp(mask1, mask2, M)
-    # cv2.imshow(warped_img)
-
-    blended_img = blend(warped_img)
+    (final_x, final_y), warped_mask1 = warp(mask1, mask2, M)
+    blended_img = blend(warped_mask1, mask2)
+    mosaic = cv2.bitwise_or(mask2,blended_img)
+    # cv2.imshow(mosaic)
         
 if __name__ == "__main__":
     main()
