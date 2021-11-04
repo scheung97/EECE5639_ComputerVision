@@ -6,7 +6,7 @@ Computer Vision - Fall2021 taken with Professor Octavia Camps
 |Project               | Description                                      |
 |----------------------|--------------------------------------------------|
 |[Project1][1]         | Motion Detection                                 |
-|[Project2][2]         | Image Mosaicing                                  |
+|[Project2][2]         | Image Mosaicking                                  |
 
 
 
