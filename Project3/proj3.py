@@ -114,6 +114,13 @@ def plot_correspondences(img1, img2, matches):
     plt.show()
     return 0
 
+#https://sourishghosh.com/2016/fundamental-matrix-from-camera-matrices/
+def computeF(K1, K2, R, t): 
+    A = K1*(np.transpose(R)) *t
+    C = [0 -A(3) A(2); A(3) 0 -A(1); -A(2) A(1) 0]
+    ret = np.transpose(np.inverse(K2))*R* np.transpose(K1)*C
+    return ret
+
 def main(): 
     #read in cast images: 
     cast_files = [filename for filename in sorted(os.listdir(cast_path)) if os.path.isfile(os.path.join(cast_path, filename))]
@@ -149,13 +156,18 @@ def main():
     cones_corners1, cones_mask1 = harrisCorner(cones_imgs[0])
     cones_corners2, cones_mask2 = harrisCorner(cones_imgs[1])
     cones_correspondences = match_corners(cones_mask1, cones_mask2, cones_corners1, cones_corners2)
-    plot_correspondences(cones_mask1, cones_mask2, cast_correspondences)
+    plot_correspondences(cones_mask1, cones_mask2, cones_correspondences)
 
 
 
 # 2. Write a program to estimate the Fundamental Matrix for each pair using the correspondences
 # above and RANSAC to eliminate outliers. Display the inlier correspondences in the same
 # way as above.
+    F = computeF(K1, K2, R,t) #not sure that this works 
+
+
+
+
 
 # 3. Compute a dense disparity map using the Fundamental matrix to help reduce the search
 # space. The output should be three images, one image with the vertical disparity component,
@@ -163,6 +175,14 @@ def main():
 # the disparity vector using color, where the direction of the vector is coded by hue, and the
 # length of the vector is coded by saturation. For gray scale display, scale the disparity values
 # so the lowest disparity is 0 and the highest disparity is 255.
+
+    """Piazza answer about using F matrix to get dense disparity map: 
+===============================================================================
+    "basically that a feature in one image must fall along an epipolar line in the other image,
+     and the epipolar lines can be computed from the formula on slide 31 of lecture 19. 
+     You compute F * P_L, which then becomes an ax + by + c = 0 equation. 
+     Then, you search along the epipolar line (with some slop presumably) for the match"
+    """
     return
 if __name__ == "__main__": 
     main()
