@@ -178,17 +178,8 @@ def main():
     # print(pts1)
 
     F, mask = cv2.findFundamentalMat(pts1, pts2, cv2.FM_RANSAC, 0.1,0.99) #0.1 = threshold dist from pixel; 0.99 = confidence 
-    print(F)
-
-
         #thresh_dist = max distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier 
         #confidence = specify desired level of confidence(probability) that estimated matrix is correct
-
-
-
-
-
-
 # 3. Compute a dense disparity map using the Fundamental matrix to help reduce the search
 # space. The output should be three images, one image with the vertical disparity component,
 # and another image with the horizontal disparity component, and a third image representing
@@ -197,15 +188,33 @@ def main():
 # so the lowest disparity is 0 and the highest disparity is 255.
 
     """https://docs.opencv.org/3.4/da/de9/tutorial_py_epipolar_geometry.html"""
-    # cv2.computeCorrespondEpilines
+    # Find epipolar lines corresponding to points in right image(2nd img) and draw its lines on left image) 
+    lines1 = cv2.computeCorrespondEpilines(pts2.reshape(-1,1,2),2,F)
+    lines1 = lines1.reshape(-1,3)
 
-    """Piazza answer about using F matrix to get dense disparity map: 
-===============================================================================
-    "basically that a feature in one image must fall along an epipolar line in the other image,
-     and the epipolar lines can be computed from the formula on slide 31 of lecture 19. 
-     You compute F * P_L, which then becomes an ax + by + c = 0 equation. 
-     Then, you search along the epipolar line (with some slop presumably) for the match"
+    # Find epipolar lines corresponding to points in left image(1st img) and draw its lines on right image) 
+    lines2 = cv2.computeCorrespondEpilines(pts1.reshape(-1,1,2),1,F)
+    lines2 = lines2.reshape(-1,3)
+
     """
+    Math way to get disparity(?):
+    line_l = F * pts1 #ax+by+c = 0 --> by+c (using purely horizontal lines)
+    
+    best_pts = search_lines(img1, line_l)
+    disp = pts1-best_pts 
+    
+    """
+
+    min_disp = 16
+    num_disp = 64-min_disp
+
+    stereo = cv2.StereoSGBM_create(minDisparity = min_disp, 
+                                numDisparities = num_disp, blockSize = 1)
+    disp = stereo.compute(cones_imgs[0], cones_imgs[1]).astype(np.float32) / 16.0
+    plt.imshow(disp, 'gray') 
+    plt.figure(2)
+    plt.imshow(disp, 'heatmap')
+    plt.show()
     return
 if __name__ == "__main__": 
     main()
