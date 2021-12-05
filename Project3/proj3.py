@@ -1,4 +1,3 @@
-#!/usr/bin/python3  
 import cv2  
 import numpy as np
 import os 
@@ -114,12 +113,8 @@ def plot_correspondences(img1, img2, matches):
     plt.show()
     return 0
 
-#https://sourishghosh.com/2016/fundamental-matrix-from-camera-matrices/
-def computeF(K1, K2, R, t): 
-    A = K1*(np.transpose(R)) *t
-    C = [0 -A(3) A(2); A(3) 0 -A(1); -A(2) A(1) 0]
-    ret = np.transpose(np.inverse(K2))*R* np.transpose(K1)*C
-    return ret
+
+
 
 def main(): 
     #read in cast images: 
@@ -146,12 +141,11 @@ def main():
 # connecting corresponding features with a line. Using lines of different colors for different
 # points makes it easier to visualize the results.
 
-    #correspondences for cast imgs
-    cast_corners1, cast_mask1 = harrisCorner(cast_imgs[0])
-    cast_corners2, cast_mask2 = harrisCorner(cast_imgs[1])
-    cast_correspondences = match_corners(cast_mask1, cast_mask2, cast_corners1, cast_corners2)
-    plot_correspondences(cast_mask1, cast_mask2, cast_correspondences)
-
+    # #correspondences for cast imgs
+    # cast_corners1, cast_mask1 = harrisCorner(cast_imgs[0])
+    # cast_corners2, cast_mask2 = harrisCorner(cast_imgs[1])
+    # cast_correspondences = match_corners(cast_mask1, cast_mask2, cast_corners1, cast_corners2)
+    # plot_correspondences(cast_mask1, cast_mask2, cast_correspondences)
     #correspondences for cones imgs
     cones_corners1, cones_mask1 = harrisCorner(cones_imgs[0])
     cones_corners2, cones_mask2 = harrisCorner(cones_imgs[1])
@@ -159,11 +153,37 @@ def main():
     plot_correspondences(cones_mask1, cones_mask2, cones_correspondences)
 
 
+    #toggle for using specific image set: 
+    correspondences = cones_correspondences 
 
 # 2. Write a program to estimate the Fundamental Matrix for each pair using the correspondences
 # above and RANSAC to eliminate outliers. Display the inlier correspondences in the same
 # way as above.
-    F = computeF(K1, K2, R,t) #not sure that this works 
+    
+    """ https://www.programcreek.com/python/example/89336/cv2.findFundamentalMat
+        http://www.opencv.org.cn/opencvdoc/2.3.2/html/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html?highlight=findfun
+    """
+
+    # print(cast_correspondences[:][2][0])
+    pts1 = [] 
+    pts2 = []
+
+    for i in range(len(correspondences)):
+        temp1 = [correspondences[:][i][0],correspondences[:][i][1]]
+        temp2 = [correspondences[:][i][2],correspondences[:][i][3]]
+        pts1.append(temp1)
+        pts2.append(temp2)
+    pts1 = np.array(pts1) 
+    pts2 = np.array(pts2)
+    # print(pts1)
+
+    F, mask = cv2.findFundamentalMat(pts1, pts2, cv2.FM_RANSAC, 0.1,0.99) #0.1 = threshold dist from pixel; 0.99 = confidence 
+    print(F)
+
+
+        #thresh_dist = max distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier 
+        #confidence = specify desired level of confidence(probability) that estimated matrix is correct
+
 
 
 
@@ -175,6 +195,9 @@ def main():
 # the disparity vector using color, where the direction of the vector is coded by hue, and the
 # length of the vector is coded by saturation. For gray scale display, scale the disparity values
 # so the lowest disparity is 0 and the highest disparity is 255.
+
+    """https://docs.opencv.org/3.4/da/de9/tutorial_py_epipolar_geometry.html"""
+    # cv2.computeCorrespondEpilines
 
     """Piazza answer about using F matrix to get dense disparity map: 
 ===============================================================================
